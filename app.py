@@ -4,7 +4,8 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    st.warning("python-dotenv パッケージが見つかりません。環境変数は直接読み込まれます。")
+    # Streamlit Community Cloudでは不要なので、警告を表示しない
+    pass
 
 # LangChainのインポートを複数のパターンで試行
 ChatOpenAI = None
