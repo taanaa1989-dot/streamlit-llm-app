@@ -1,11 +1,17 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    st.warning("python-dotenv パッケージが見つかりません。環境変数は直接読み込まれます。")
 
-# 環境変数を読み込み
-load_dotenv()
+try:
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import HumanMessage, SystemMessage
+except ImportError as e:
+    st.error(f"LangChainパッケージが正しくインストールされていません: {e}")
+    st.stop()
 
 def get_llm_response(input_text, expert_type):
     """
@@ -30,7 +36,11 @@ def get_llm_response(input_text, expert_type):
         # OpenAI APIキーを取得
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            return "エラー: OpenAI APIキーが設定されていません。.envファイルでOPENAI_API_KEYを設定してください。"
+            # Streamlit Community Cloud の場合は st.secrets を試す
+            try:
+                api_key = st.secrets["OPENAI_API_KEY"]
+            except:
+                return "エラー: OpenAI APIキーが設定されていません。.envファイルまたはStreamlit SecretsでOPENAI_API_KEYを設定してください。"
         
         # ChatOpenAIインスタンスを作成
         llm = ChatOpenAI(
