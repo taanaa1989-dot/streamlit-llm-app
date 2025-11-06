@@ -6,12 +6,25 @@ try:
 except ImportError:
     st.warning("python-dotenv パッケージが見つかりません。環境変数は直接読み込まれます。")
 
+# LangChainのインポートを複数のパターンで試行
+ChatOpenAI = None
+HumanMessage = None
+SystemMessage = None
+
 try:
     from langchain_openai import ChatOpenAI
     from langchain_core.messages import HumanMessage, SystemMessage
-except ImportError as e:
-    st.error(f"LangChainパッケージが正しくインストールされていません: {e}")
-    st.stop()
+except ImportError:
+    try:
+        from langchain.chat_models import ChatOpenAI
+        from langchain.schema import HumanMessage, SystemMessage
+    except ImportError:
+        # 最後の手段として OpenAI の直接使用
+        try:
+            from openai import OpenAI
+        except ImportError:
+            st.error("LangChainまたはOpenAIパッケージが正しくインストールされていません。")
+            st.stop()
 
 def get_llm_response(input_text, expert_type):
     """
@@ -42,22 +55,40 @@ def get_llm_response(input_text, expert_type):
             except:
                 return "エラー: OpenAI APIキーが設定されていません。.envファイルまたはStreamlit SecretsでOPENAI_API_KEYを設定してください。"
         
-        # ChatOpenAIインスタンスを作成
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.5,
-            openai_api_key=api_key
-        )
+        # LangChainが利用可能な場合
+        if ChatOpenAI and HumanMessage and SystemMessage:
+            # ChatOpenAIインスタンスを作成
+            llm = ChatOpenAI(
+                model="gpt-4o-mini",
+                temperature=0.5,
+                openai_api_key=api_key
+            )
+            
+            # メッセージを作成
+            messages = [
+                SystemMessage(content=system_messages[expert_type]),
+                HumanMessage(content=input_text)
+            ]
+            
+            # LLMに問い合わせ
+            response = llm.invoke(messages)
+            return response.content
         
-        # メッセージを作成
-        messages = [
-            SystemMessage(content=system_messages[expert_type]),
-            HumanMessage(content=input_text)
-        ]
-        
-        # LLMに問い合わせ
-        response = llm.invoke(messages)
-        return response.content
+        else:
+            # OpenAI APIを直接使用
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_messages[expert_type]},
+                    {"role": "user", "content": input_text}
+                ],
+                temperature=0.5
+            )
+            
+            return completion.choices[0].message.content
         
     except Exception as e:
         return f"エラーが発生しました: {str(e)}"
