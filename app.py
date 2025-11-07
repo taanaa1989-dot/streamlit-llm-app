@@ -21,11 +21,6 @@ except ImportError:
         from langchain_core.messages import HumanMessage, SystemMessage
     except ImportError:
         # 最後の手段として OpenAI の直接使用
-        try:
-            from openai import OpenAI
-        except ImportError:
-            st.error("LangChainまたはOpenAIパッケージが正しくインストールされていません。")
-            st.stop()
 
 def get_llm_response(input_text, expert_type):
     """
